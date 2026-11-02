@@ -20,7 +20,6 @@
       gap: 2rem;
       padding: 1rem 2rem 2rem;
     }
-    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
     aside {
       background: #f0f0f0;
       border: 1px solid #ddd;
@@ -47,16 +46,42 @@
     }
     .legend span.sw { width: 22px; height: 16px; display: inline-block; }
     #info {
-      font-family: ui-monospace, Menlo, monospace;
-      background: #f5f5f5;
+      background: #fff;
       border: 1px solid #ccc;
       border-radius: 4px;
       padding: 0.75rem 1rem;
-      white-space: pre-wrap;
       font-size: 0.9rem;
       margin-top: 1.5rem;
     }
     #info:empty { display: none; }
+    #info .name { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+    #info dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 0.15rem 1rem; }
+    #info dt { color: #555; }
+    #info dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    path.q { -webkit-tap-highlight-color: transparent; }
+
+    /* ---------- Mobile ---------- */
+    @media (max-width: 800px) {
+      header { padding: 1rem 1rem 0; }
+      h1 { font-size: 1.6rem; }
+      .layout { grid-template-columns: 1fr; gap: 1rem; padding: 0.75rem 1rem 1.5rem; }
+      /* nicht sticky: sonst deckt die Box die Karte beim Scrollen zu */
+      aside { position: static; padding: 0.9rem 1rem; }
+      aside p { font-size: 0.9rem; margin-bottom: 0.25rem; }
+      .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+      .layout > *, .controls > div { min-width: 0; }
+      .controls label { margin-top: 0.5rem; font-size: 0.9rem; }
+      h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+      svg { max-height: none; }
+      /* Legende unter die Karte statt darüber */
+      .legend {
+        position: static; background: none; padding: 0.5rem 0 0;
+        grid-template-columns: repeat(4, auto 1fr); gap: 4px 6px;
+        font-size: 0.75rem; align-items: center;
+      }
+      .legend span.sw { width: 16px; height: 12px; }
+      #info { margin-top: 1rem; font-size: 0.95rem; }
+    }
   </style>
 </head>
 <body>
@@ -64,15 +89,21 @@
   <div class="layout">
     <aside>
       <p>Choose variable and year to display dog related data in Zurich.
-         Hover over the map to see the detailed data below the selection.</p>
-      <label for="year">Select year</label>
-      <select id="year"></select>
-      <label for="variable">Select variable</label>
-      <select id="variable">
-        <option value="dogs">Number of dogs per district</option>
-        <option value="inh">Inhabitants per district</option>
-        <option value="per100">Dogs per 100 inhabitants</option>
-      </select>
+         Hover over or tap a district to see its details.</p>
+      <div class="controls">
+        <div>
+          <label for="year">Year</label>
+          <select id="year"></select>
+        </div>
+        <div>
+          <label for="variable">Variable</label>
+          <select id="variable">
+            <option value="dogs">Number of dogs</option>
+            <option value="inh">Inhabitants</option>
+            <option value="per100">Dogs per 100 inhabitants</option>
+          </select>
+        </div>
+      </div>
       <div id="info"></div>
     </aside>
     <main>
@@ -135,13 +166,22 @@
     function showInfo(q, p) {
       paths.forEach(x => x.classList.remove('active'));
       p.classList.add('active');
+      svg.appendChild(p); // aktiven Umriss nach vorne, damit er nicht verdeckt wird
       const r = rowsForYear()[q.qnr];
-      info.textContent = r
-        ? `Year ${yearSel.value}\n${q.qname}\nDistrict ${q.knr}\n` +
-          `Number of inhabitants: ${fmt(r.inh)}\nNumber of dogs: ${r.dogs}\n` +
-          `Dogs per 100 inhabitants: ${r.per100.toFixed(2)}`
-        : `Year ${yearSel.value}\n${q.qname}\nNo data`;
+      const rows = r
+        ? [['District', q.knr], ['Inhabitants', fmt(r.inh)], ['Dogs', fmt(r.dogs)],
+           ['Dogs per 100 inh.', r.per100.toFixed(2)]]
+        : [['', 'No data']];
+      info.innerHTML = `<div class="name">${q.qname} · ${yearSel.value}</div><dl>` +
+        rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') + '</dl>';
     }
+
+    // Auf dem Handy die Details direkt unter der Karte zeigen, sonst in der Seitenleiste
+    const mobile = window.matchMedia('(max-width: 800px)');
+    const placeInfo = () => (mobile.matches
+      ? document.querySelector('main') : document.querySelector('aside')).appendChild(info);
+    mobile.addEventListener('change', placeInfo);
+    placeInfo();
 
     function render() {
       const v = varSel.value;
