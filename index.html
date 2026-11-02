@@ -4,6 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dogs of Zurich</title>
+  <meta name="description" content="Interactive map of dogs per district in Zurich, 2014–2025: number of dogs, inhabitants and dogs per 100 inhabitants.">
+  <!-- Vorschau beim Teilen (LinkedIn, Slack, WhatsApp …); og:image braucht eine absolute URL -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://stillsevi.github.io/dogs-of-zurich/">
+  <meta property="og:title" content="Dogs of Zurich">
+  <meta property="og:description" content="Interactive map of dogs per district in Zurich, 2014–2025: number of dogs, inhabitants and dogs per 100 inhabitants.">
+  <meta property="og:image" content="https://stillsevi.github.io/dogs-of-zurich/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Map of Zurich's districts coloured by number of dogs in 2025">
+  <meta name="twitter:card" content="summary_large_image">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -64,6 +75,8 @@
       margin-top: 1.5rem;
     }
     #info:empty { display: none; }
+    footer { padding: 0 2rem 2rem; font-size: 0.85rem; color: #666; }
+    footer a { color: inherit; }
     #info .name { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
     #info dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 0.15rem 1rem; }
     #info dt { color: #555; }
@@ -78,7 +91,7 @@
       /* nicht sticky: sonst deckt die Box die Karte beim Scrollen zu */
       aside { position: static; padding: 0.9rem 1rem; }
       aside p { font-size: 0.9rem; margin-bottom: 0.25rem; }
-      .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+      .controls { display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.75rem; }
       .layout > *, .controls > div { min-width: 0; }
       .controls label { margin-top: 0.5rem; font-size: 0.9rem; }
       h2 { font-size: 1.1rem; margin-bottom: 0.5rem; }
@@ -91,6 +104,7 @@
       }
       .legend span.sw { width: 16px; height: 12px; }
       #info { margin-top: 1rem; font-size: 0.95rem; }
+      footer { padding: 0 1rem 1.5rem; }
     }
   </style>
 </head>
@@ -110,7 +124,7 @@
           <select id="variable">
             <option value="dogs">Number of dogs</option>
             <option value="inh">Inhabitants</option>
-            <option value="per100">Dogs per 100 inhabitants</option>
+            <option value="per100">Dogs per 100 people</option>
           </select>
         </div>
       </div>
@@ -124,6 +138,7 @@
       </div>
     </main>
   </div>
+  <footer>Daten: <a href="https://data.stadt-zuerich.ch/">Open Data Stadt Zürich</a></footer>
 
   <script src="data.js"></script>
   <script>
