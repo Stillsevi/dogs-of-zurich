@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dogs of Zurich</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #222;
+      background: #fafafa;
+    }
+    header { padding: 1.5rem 2rem 0.5rem; }
+    h1 { margin: 0; font-size: 2rem; }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+      padding: 1rem 2rem 2rem;
+    }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+    aside {
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 1.25rem;
+      align-self: start;
+      position: sticky;
+      top: 1rem;
+    }
+    aside p { color: #666; margin-top: 0; line-height: 1.4; }
+    label { display: block; font-weight: 600; margin: 1rem 0 0.35rem; }
+    select { width: 100%; padding: 0.45rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; }
+    h2 { margin: 0 0 1rem; font-size: 1.4rem; font-weight: 500; }
+    .map-wrap { position: relative; }
+    svg { width: 100%; max-height: 75vh; display: block; }
+    path.q { stroke: #666; stroke-width: 12; cursor: pointer; }
+    path.q:hover, path.q.active { stroke: #000; stroke-width: 40; }
+    .legend {
+      position: absolute; top: 0; right: 0;
+      display: grid; grid-template-columns: auto auto; gap: 4px 8px;
+      font-size: 0.9rem;
+      background: rgba(250, 250, 250, 0.85);
+      padding: 0.5rem 0.75rem; border-radius: 4px;
+    }
+    .legend span.sw { width: 22px; height: 16px; display: inline-block; }
+    #info {
+      font-family: ui-monospace, Menlo, monospace;
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 0.75rem 1rem;
+      white-space: pre-wrap;
+      font-size: 0.9rem;
+      margin-top: 1.5rem;
+    }
+    #info:empty { display: none; }
+  </style>
+</head>
+<body>
+  <header><h1>Dogs of Zurich</h1></header>
+  <div class="layout">
+    <aside>
+      <p>Choose variable and year to display dog related data in Zurich.
+         Hover over the map to see the detailed data below the selection.</p>
+      <label for="year">Select year</label>
+      <select id="year"></select>
+      <label for="variable">Select variable</label>
+      <select id="variable">
+        <option value="dogs">Number of dogs per district</option>
+        <option value="inh">Inhabitants per district</option>
+        <option value="per100">Dogs per 100 inhabitants</option>
+      </select>
+      <div id="info"></div>
+    </aside>
+    <main>
+      <h2 id="title"></h2>
+      <div class="map-wrap">
+        <svg id="map"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    const D = window.DOGS_DATA;
+    // ColorBrewer "Reds", 8 Stufen
+    const REDS = ['#fff5f0','#fee0d2','#fcbba1','#fc9272','#fb6a4a','#ef3b2c','#cb181d','#99000d'];
+    // Feste Klassen für alle Jahre (deckt den Wertebereich 2014–2025 ab):
+    // start + i * step, jeweils "von (inkl.) bis (exkl.)"
+    const CLASSES = {
+      dogs:   { start: 0,   step: 100,  digits: 0 },  // 0 – 800
+      inh:    { start: 0,   step: 5000, digits: 0 },  // 0 – 40'000
+      per100: { start: 0.5, step: 0.5,  digits: 1 }   // 0.5 – 4.5
+    };
+    const LABELS = {
+      dogs: 'Number of dogs per district',
+      inh: 'Inhabitants per district',
+      per100: 'Dogs per 100 inhabitants'
+    };
+
+    const yearSel = document.getElementById('year');
+    const varSel = document.getElementById('variable');
+    const svg = document.getElementById('map');
+    const info = document.getElementById('info');
+    const fmt = (n, digits = 0) => n.toLocaleString('de-CH', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+    D.years.forEach(y => yearSel.add(new Option(y, y)));
+    yearSel.value = Math.max(...D.years);
+
+    // Karte einmal zeichnen
+    svg.setAttribute('viewBox', `0 0 ${D.width} ${D.height}`);
+    const paths = D.districts.map(q => {
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('d', q.d);
+      p.setAttribute('class', 'q');
+      p.addEventListener('mouseenter', () => showInfo(q, p));
+      p.addEventListener('click', () => showInfo(q, p));
+      svg.appendChild(p);
+      return p;
+    });
+
+    function rowsForYear() {
+      const year = +yearSel.value;
+      const rows = {};
+      D.stats.filter(s => s.year === year).forEach(s => {
+        rows[s.qnr] = { ...s, per100: s.dogs / s.inh * 100 };
+      });
+      return rows;
+    }
+
+    function showInfo(q, p) {
+      paths.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      const r = rowsForYear()[q.qnr];
+      info.textContent = r
+        ? `Year ${yearSel.value}\n${q.qname}\nDistrict ${q.knr}\n` +
+          `Number of inhabitants: ${fmt(r.inh)}\nNumber of dogs: ${r.dogs}\n` +
+          `Dogs per 100 inhabitants: ${r.per100.toFixed(2)}`
+        : `Year ${yearSel.value}\n${q.qname}\nNo data`;
+    }
+
+    function render() {
+      const v = varSel.value;
+      const rows = rowsForYear();
+      const { start, step, digits } = CLASSES[v];
+      const n = REDS.length;
+      const cls = x => Math.min(n - 1, Math.max(0, Math.floor((x - start) / step)));
+
+      D.districts.forEach((q, i) => {
+        const r = rows[q.qnr];
+        paths[i].setAttribute('fill', r ? REDS[cls(r[v])] : '#ddd');
+      });
+
+      // Ganzzahlen: "0 – 99", "100 – 199" …; Dezimalzahlen: "0.5 – 1.0" …
+      const upper = i => digits === 0 ? start + (i + 1) * step - 1 : start + (i + 1) * step;
+      document.getElementById('legend').innerHTML = REDS.map((c, i) =>
+        `<span class="sw" style="background:${c}"></span>` +
+        `<span>${fmt(start + i * step, digits)} – ${fmt(upper(i), digits)}</span>`
+      ).join('');
+
+      document.getElementById('title').textContent = `${LABELS[v]} - ${yearSel.value}`;
+
+      const active = paths.findIndex(p => p.classList.contains('active'));
+      if (active >= 0) showInfo(D.districts[active], paths[active]);
+    }
+
+    yearSel.addEventListener('change', render);
+    varSel.addEventListener('change', render);
+    render();
+  </script>
+</body>
+</html>
